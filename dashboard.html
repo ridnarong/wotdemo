@@ -10,11 +10,42 @@
       <option value="{}" selected="selected">Power Outlet</option>
     </select>
   </div>
-  <div id="chart_div">
+  <div id="gaugeChart">
   </div>
+  <table>
+    <tr>
+      <td>
+        <div id="lineChartIRMS">
+        </div>
+      </td>
+      <td>
+        <div id="lineChartVRMS">
+        </div>
+      </td>
+      <td>
+        <div id="lineChartPOW">
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <div id="lineChartVA">
+        </div>
+      </td>
+      <td>
+        <div id="lineChartActE">
+        </div>
+      </td>
+      <td>
+        <div id="lineChartAppE">
+        </div>
+      </td>
+    </tr>
+  </table>
   <script type="text/javascript">
 (function() {
-  var httpRequest, gaugeData, chart;
+  var httpRequest, lineDataIRMS, lineDataVRMS, lineDataPOW, lineDataVA, lineDataActE, lineDataAppE,  gaugeChart, 
+    lineChartIRMS, lineChartVRMS, lineChartPOW, lineChartVA, lineChartActE, lineChartAppE;
   var yourWoTBaseURL = ''
   var yourToken = ''
   var options = {
@@ -26,10 +57,31 @@
 
   function fetchData() {
     httpRequest = new XMLHttpRequest();
-    gaugeData = new google.visualization.DataTable();
-    chart = new google.visualization.Gauge(document.getElementById('chart_div'));
-    gaugeData.addColumn('string', 'Label');
-    gaugeData.addColumn('number', 'Value');
+    lineDataIRMS = new google.visualization.DataTable();
+    lineDataIRMS.addColumn('datetime', 'timestamp');
+    lineDataIRMS.addColumn('number', 'IRMS');
+    lineDataVRMS = new google.visualization.DataTable();
+    lineDataVRMS.addColumn('datetime', 'timestamp');
+    lineDataVRMS.addColumn('number', 'VRMS');
+    lineDataPOW = new google.visualization.DataTable();
+    lineDataPOW.addColumn('datetime', 'timestamp');
+    lineDataPOW.addColumn('number', 'POW');
+    lineDataVA = new google.visualization.DataTable();
+    lineDataVA.addColumn('datetime', 'timestamp');
+    lineDataVA.addColumn('number', 'VA');
+    lineDataActE = new google.visualization.DataTable();
+    lineDataActE.addColumn('datetime', 'timestamp');
+    lineDataActE.addColumn('number', 'ActE');
+    lineDataAppE = new google.visualization.DataTable();
+    lineDataAppE.addColumn('datetime', 'timestamp');
+    lineDataAppE.addColumn('number', 'AppE');
+    gaugeChart = new google.visualization.Gauge(document.getElementById('gaugeChart'));
+    lineChartIRMS = new google.charts.Line(document.getElementById('lineChartIRMS'));
+    lineChartVRMS = new google.charts.Line(document.getElementById('lineChartVRMS'));
+    lineChartPOW = new google.charts.Line(document.getElementById('lineChartPOW'));
+    lineChartVA = new google.charts.Line(document.getElementById('lineChartVA'));
+    lineChartActE = new google.charts.Line(document.getElementById('lineChartActE'));
+    lineChartAppE = new google.charts.Line(document.getElementById('lineChartAppE'));
 
     if (!httpRequest) {
       alert('Giving up :( Cannot create an XMLHTTP instance');
@@ -83,32 +135,37 @@
           'Authorization': `Bearer ${yourToken}`
         }
       })
-    })).then((results) => {
-      var resultText = '';
-
-      for (let result of results) {
-        result.json().then((j) => {
-          for (let k in j) {
-            let index = -1;
-            for (var i = gaugeData.getNumberOfRows() - 1; i >= 0; i--) {
-              if (gaugeData.getFormattedValue(i, 0) === k) {
-                index = i;
-              }
-            }
-            if (index < 0) {
-              gaugeData.addRow([k, j[k]]);
-            } else {
-              gaugeData.setValue(index, 1, j[k]);
-            }
-            chart.draw(gaugeData, options);
-          }
-        }).catch(console.error)
+    })).then((results) => Promise.all(results.map((j) => j.json()))).then((values) => {
+      var v = {};
+      for (let value of values) {
+        v = Object.assign(v, value)
       }
+      lineDataIRMS.addRow([new Date(), v['IRMS']])
+      lineDataVRMS.addRow([new Date(), v['VRMS']])
+      lineDataPOW.addRow([new Date(), v['POW']])
+      lineDataVA.addRow([new Date(), v['VA']])
+      lineDataActE.addRow([new Date(), v['ActE']])
+      lineDataAppE.addRow([new Date(), v['AppE']])
+      gaugeChart.draw(google.visualization.arrayToDataTable([
+        ['Label', 'Value'],
+        ['IRMS', v['IRMS']],
+        ['VRMS', v['VRMS']],
+        ['POW', v['POW']],
+        ['VA', v['VA']],
+        ['ActE', v['ActE']],
+        ['AppE', v['AppE']],
+      ]), options);
+      lineChartIRMS.draw(lineDataIRMS, {});
+      lineChartVRMS.draw(lineDataVRMS, {});
+      lineChartPOW.draw(lineDataPOW, {});
+      lineChartVA.draw(lineDataVA, {});
+      lineChartActE.draw(lineDataActE, {});
+      lineChartAppE.draw(lineDataAppE, {});
     }).catch(console.error)
   }
 
   document.getElementById('thingOptions').onchange = handlePropertyChanged;
-  google.charts.load('current', {'packages':['gauge']});
+  google.charts.load('current', {'packages':['line', 'gauge']});
   google.charts.setOnLoadCallback(fetchData);
 })();
   </script>
