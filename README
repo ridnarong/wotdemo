@@ -1,0 +1,24 @@
+README
+========
+1. สร้าง WoT Gateway ศึกษาได้ที่ https://iot.mozilla.org/
+2. เริ่มต้นพัฒนา Thing โดย WoT รองรับภาษา โปรแกรมต่างๆ https://iot.mozilla.org/things/
+3. เริ่มต้นจากอุปกรณ์ ที่รองรับ WoT 
+  - BroadLink 
+  - Chromecast 
+  - Eufy 
+  - GPIO 
+  - HomeKit 
+  - LIFX 
+  - Logitech Harmony
+  - Nanoleaf 
+  - Netatmo Weather Station 
+  - ONVIF Profile S camera
+  - Philips Hue 
+  - TP-Link smart plug/bulb device 
+  - Wemo smart device 
+  - Yeelight smart bulb
+  - Z-Wave 
+  - Zigbee
+4. เปิดใช้งาน Gateway และลงทะเบียน เพื่อรับ subdomain
+5. ศึกษาและใช้งาน WoT API 
+6. พัฒนาระบบ เพื่อดึงข้อมูลจาก WoT ผ่าน HTTP API

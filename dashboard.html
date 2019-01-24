@@ -1,0 +1,116 @@
+ <!DOCTYPE html>
+<html>
+<head>
+<title>WoT Frontend Demo</title>
+</head>
+<body>
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <div>
+    <select id="thingOptions">
+      <option value="{}" selected="selected">Power Outlet</option>
+    </select>
+  </div>
+  <div id="chart_div">
+  </div>
+  <script type="text/javascript">
+(function() {
+  var httpRequest, gaugeData, chart;
+  var yourWoTBaseURL = ''
+  var yourToken = ''
+  var options = {
+    width: 360, height: 240,
+    redFrom: 90, redTo: 100,
+    yellowFrom:75, yellowTo: 90,
+    minorTicks: 5
+  };
+
+  function fetchData() {
+    httpRequest = new XMLHttpRequest();
+    gaugeData = new google.visualization.DataTable();
+    chart = new google.visualization.Gauge(document.getElementById('chart_div'));
+    gaugeData.addColumn('string', 'Label');
+    gaugeData.addColumn('number', 'Value');
+
+    if (!httpRequest) {
+      alert('Giving up :( Cannot create an XMLHTTP instance');
+      return false;
+    }
+    httpRequest.onreadystatechange = loadThings;
+    httpRequest.open('GET', yourWoTBaseURL + '/things/');
+    httpRequest.setRequestHeader('Accept', 'application/json');
+    httpRequest.setRequestHeader('Authorization', 'Bearer ' + yourToken);
+    httpRequest.send();
+
+    setInterval(function() {
+      fetchProperty(JSON.parse(document.getElementById('thingOptions').value));
+    }, 5000)
+  }
+
+  function loadThings() {
+    if (httpRequest.readyState === XMLHttpRequest.DONE) {
+      if (httpRequest.status === 200) {
+        var things = JSON.parse(httpRequest.responseText);
+        var thingOptions = document.getElementById("thingOptions");
+        for (var i = things.length - 1; i >= 0; i--) {
+          var opt = document.createElement("OPTION");
+          opt.setAttribute('value', JSON.stringify(things[i].properties));
+          opt.appendChild(document.createTextNode(things[i].name));
+          thingOptions.appendChild(opt);
+        }
+      } else {
+        alert('There was a problem with the request.');
+      }
+    }
+  }
+
+  function handlePropertyChanged(event) {
+    fetchProperty(JSON.parse(event.target.value))
+  }
+
+  function fetchProperty(properties) {
+    httpRequest = new XMLHttpRequest();
+
+    if (!httpRequest) {
+      alert('Giving up :( Cannot create an XMLHTTP instance');
+      return false;
+    }
+
+
+    Promise.all(Object.values(properties).map(function (p) {
+      return fetch(`${yourWoTBaseURL}${p.href}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${yourToken}`
+        }
+      })
+    })).then((results) => {
+      var resultText = '';
+
+      for (let result of results) {
+        result.json().then((j) => {
+          for (let k in j) {
+            let index = -1;
+            for (var i = gaugeData.getNumberOfRows() - 1; i >= 0; i--) {
+              if (gaugeData.getFormattedValue(i, 0) === k) {
+                index = i;
+              }
+            }
+            if (index < 0) {
+              gaugeData.addRow([k, j[k]]);
+            } else {
+              gaugeData.setValue(index, 1, j[k]);
+            }
+            chart.draw(gaugeData, options);
+          }
+        }).catch(console.error)
+      }
+    }).catch(console.error)
+  }
+
+  document.getElementById('thingOptions').onchange = handlePropertyChanged;
+  google.charts.load('current', {'packages':['gauge']});
+  google.charts.setOnLoadCallback(fetchData);
+})();
+  </script>
+</body>
+</html>

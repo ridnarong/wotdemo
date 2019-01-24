@@ -1,0 +1,104 @@
+ <!DOCTYPE html>
+<html>
+<head>
+<title>WoT Frontend Demo</title>
+</head>
+<body>
+  <table>
+    <tr>
+      <td>
+        <div>
+          <select id="thingOptions">
+            <option value="{}" selected="selected">Power Outlet</option>
+          </select>
+        </div>
+      </td>
+      <td>
+        <div id="result">
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2">
+        <textarea cols="100" rows="50" id="message"></textarea>
+      </td>
+    </tr>
+  </table>
+  <script type="text/javascript">
+(function() {
+  var httpRequest;
+  var yourWoTBaseURL = ''
+  var yourToken = ''
+
+  function fetchData() {
+    httpRequest = new XMLHttpRequest();
+
+    if (!httpRequest) {
+      alert('Giving up :( Cannot create an XMLHTTP instance');
+      return false;
+    }
+    httpRequest.onreadystatechange = loadThings;
+    httpRequest.open('GET', yourWoTBaseURL + '/things/');
+    httpRequest.setRequestHeader('Accept', 'application/json');
+    httpRequest.setRequestHeader('Authorization', 'Bearer ' + yourToken);
+    httpRequest.send();
+  }
+
+  function loadThings() {
+    if (httpRequest.readyState === XMLHttpRequest.DONE) {
+      if (httpRequest.status === 200) {
+        var things = JSON.parse(httpRequest.responseText);
+        document.getElementById('message').innerHTML = httpRequest.responseText
+        var thingOptions = document.getElementById("thingOptions");
+        for (var i = things.length - 1; i >= 0; i--) {
+          var opt = document.createElement("OPTION");
+          opt.setAttribute('value', JSON.stringify(things[i].properties));
+          opt.appendChild(document.createTextNode(things[i].name));
+          thingOptions.appendChild(opt);
+        }
+      } else {
+        alert('There was a problem with the request.');
+      }
+    }
+  }
+
+  function fetchProperty(event) {
+    httpRequest = new XMLHttpRequest();
+
+    if (!httpRequest) {
+      alert('Giving up :( Cannot create an XMLHTTP instance');
+      return false;
+    }
+
+    var properties = JSON.parse(event.target.value);
+    var resultElement = document.getElementById("result");
+    resultElement.innerHTML = '';
+
+    Promise.all(Object.values(properties).map(function (p) {
+      return fetch(`${yourWoTBaseURL}${p.href}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${yourToken}`
+        }
+      })
+    })).then((results) => {
+      var resultText = '';
+      for (let result of results) {
+        result.json().then((j) => {
+          for (let k in j) {
+            resultElement.appendChild(document.createTextNode(k + ":" + j[k]));
+            resultElement.appendChild(document.createElement('BR'));
+          }
+        })
+      }
+    }).catch(console.error)
+  }
+
+  fetchData();
+  document.getElementById('thingOptions').onchange = fetchProperty;
+
+})();
+
+  </script>
+</body>
+</html>
